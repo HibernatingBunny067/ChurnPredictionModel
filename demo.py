@@ -8,7 +8,6 @@ YES_NO_OPTS = ["Yes", "No"]
 INTERNET_OPTS = ["DSL", "Fiber optic", "No"]
 CONTRACT_OPTS = ["Month-to-month", "One year", "Two year"]
 PAYMENT_OPTS = ["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"]
-# Special options for services that depend on internet/phone
 SERVICE_OPTS = ["Yes", "No", "No internet service"] 
 PHONE_OPTS = ["Yes", "No", "No phone service"]
 
