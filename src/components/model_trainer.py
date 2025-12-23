@@ -36,19 +36,17 @@ class ModelTrainer:
 
             logging.info('Training Started.')
             model.fit(X_train,y_train)
+            logging.info('Training Done.')
 
             logging.info("Calculating optimal threshold for Recall maximization")
-            
             y_scores = model.predict_proba(X_test)[:, 1]
-            
-            precisions, recalls, thresholds = precision_recall_curve(y_test, y_scores)
-            
+            _, recalls, thresholds = precision_recall_curve(y_test, y_scores)
+            logging.info(f"Using {90}% as target recall score")
             target_recall = 0.90
             valid_indices = np.where(recalls >= target_recall)[0]
             
             if len(valid_indices) > 0:
                 best_idx = valid_indices[-1]
-                # Safety check to stay within bounds
                 best_idx = min(best_idx, len(thresholds) - 1)
                 custom_threshold = thresholds[best_idx]
             else:
@@ -62,10 +60,12 @@ class ModelTrainer:
             final_auc = roc_auc_score(y_test, y_scores)
             final_recall = recall_score(y_test, y_pred_custom)
             
-            print(f"Final Model AUC: {final_auc:.4f}")
-            print(f"Final Model Recall (at threshold {custom_threshold:.2f}): {final_recall:.4f}")
+            logging.info(f'Final Model AUC: {final_auc:.4f}, Recall(at threshold {custom_threshold:.2f}): {final_recall:.4f}')
 
-            logging.info("Saving model bundle to artifacts")
+            # print(f"Final Model AUC: {final_auc:.4f}")
+            # print(f"Final Model Recall (at threshold {custom_threshold:.2f}): {final_recall:.4f}")
+
+            logging.info(f"Saving model and threshold bundle to {self.model_trainer_config.trained_model_path}")
             
             save_object(
                 file_path=self.model_trainer_config.trained_model_path,

@@ -3,5 +3,8 @@ numpy
 seaborn
 matplotlib 
 scikit-learn
+fastapi 
 xgboost
+gradio
+pydantic
 #-e .
