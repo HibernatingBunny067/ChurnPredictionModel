@@ -41,7 +41,7 @@ def predict_datapoint(data:CustomerInput):
         data_dict = data.model_dump()
         custom_data = CustomData(**data_dict)
         pred_df = custom_data.get_data_as_data_frame()
-        print("Data Frame Before Prediction:\n", pred_df) # For debugging
+        # print("Data Frame Before Prediction:\n", pred_df) # For debugging
 
         predict_pipeline = PredictPipeline()
         results = predict_pipeline.predict(pred_df)
