@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
 
 # --- 1. CONFIGURATION ---
 # Page Config (Browser Title and Icon)
@@ -18,7 +19,18 @@ PHONE_OPTS = ["Yes", "No", "No phone service"]
 
 # --- 2. HEADER ---
 st.logo(image='images/img.jpeg',size='large')
-st.title("📡 Telco Customer Churn System")
+
+with st.sidebar:
+    st.header("Project Details")
+    st.markdown("""
+    **Architecture:**
+    - 🧠 Model: Logistic Regression
+    - ⚙️ Backend: FastAPI (Code in Repo)
+    - 🐳 Container: Docker
+    """)
+    st.link_button("View Source Code on GitHub", "https://github.com/HibernatingBunny067/ChurnPredictionModel")
+
+st.title("📡 Telco Customer Churn System with Explainable AI")
 st.markdown("""
 This dashboard connects to a **FastAPI Microservice** running a Logistic Regression model.
 Adjust customer details or upload csv below to assess the probability of churn.
@@ -60,7 +72,7 @@ with tab1:
             total = st.number_input("Total Charges ($)", value=29.85, step=1.0)
 
         # Submit Button
-        submitted = st.form_submit_button("🚀 Predict Churn Risk", use_container_width=True)
+        submitted = st.form_submit_button("🚀 Predict Churn Risk", width='stretch')
 
     # --- 4. PREDICTION LOGIC ---
     if submitted:
@@ -95,12 +107,13 @@ with tab1:
                 pred = result['prediction']
                 prob = result['probability']
                 thresh = result['threshold_used']
-
+                shap_vals = result['shap']
+                column_names = result['column_names']
                 # --- 5. VISUALIZATION ---
                 st.divider()
                 
                 # Create two columns: Metrics on Left, Chart on Right
-                vis_col1, vis_col2 = st.columns([2, 1])
+                vis_col1, vis_col2 = st.columns([0.5,0.5])
                 
                 with vis_col1:
                     st.subheader("Prediction Details")
@@ -111,31 +124,51 @@ with tab1:
                     
                     # Metrics
                     m1, m2 = st.columns(2)
-                    m1.metric("Risk Probability", f"{prob:.1%}", delta_color="inverse")
-                    m2.metric("Decision Threshold (identified in experimentation for maximum recall)", f"{thresh:.2f}")
+                    m1.metric("Risk Probability", f"{prob:.3%}", delta_color="inverse")
+                    m2.metric("Threshold", f"{thresh*100:.3f}%",help='Dynamically determined from the test test internally')
 
                 with vis_col2:
-                    labels = ['Churn Risk', 'Safe']
-                    values = [prob, 1 - prob]
-                    colors = ['#FF4B4B', '#2ECC71'] 
-                    
-                    fig = go.Figure(data=[go.Pie(
-                        labels=labels, 
-                        values=values, 
-                        hole=.6, 
-                        marker=dict(colors=colors),
-                        textinfo='percent', 
-                        hoverinfo='label+percent'
-                    )])
-                    
-                    fig.update_layout(
-                        showlegend=False,
-                        margin=dict(t=0, b=0, l=0, r=0),
-                        height=200,
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
+                    # st.divider()
+                    st.subheader("🔍 Why did the system predict this?",help='service provider must aim to work on the RED coloured features')
+                    st.write("The chart below shows which factors pushed the customer towards Churn (Red) or Safety (Green).")
 
+                    shap_array = np.array(shap_vals)
+                    
+                    if shap_array.ndim > 1:
+                        shap_array = shap_array[0]
+                
+                    shap_df = pd.DataFrame({
+                        'Feature': column_names,
+                        'SHAP Value': shap_array
+                    })
+                    
+                    # Sort by Absolute Impact (Magnitude) to show most important first
+                    shap_df['Magnitude'] = shap_df['SHAP Value'].abs()
+                    shap_df = shap_df.sort_values('Magnitude', ascending=True).tail(10) # Top 10 factors
+
+                    fig_shap = go.Figure()
+
+                    fig_shap.add_trace(go.Bar(
+                        y=shap_df['Feature'],
+                        x=shap_df['SHAP Value'],
+                        orientation='h',
+                        marker=dict(
+                            color=shap_df['SHAP Value'].apply(lambda x: '#FF4B4B' if x > 0 else '#2ECC71')
+                        ),
+                        text=shap_df['SHAP Value'].apply(lambda x: f"{x:+.2f}"), # Show value
+                        textposition='outside'
+                    ))
+
+                    fig_shap.update_layout(
+                        title="<b>Top 10 Factors Driving This Prediction</b>",
+                        xaxis_title="Impact on Churn Risk (+ increases risk, - decreases risk)",
+                        yaxis_title=None,
+                        height=500,
+                        showlegend=False,
+                        margin=dict(l=0, r=0, t=40, b=0)
+                    )
+
+                    st.plotly_chart(fig_shap, width='content')
 
                 if pred == 1:
                     with st.expander("Recommended Retention Strategy", expanded=True):

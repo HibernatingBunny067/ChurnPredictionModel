@@ -1,0 +1,9 @@
+.git
+.github
+.gitignore
+.venv
+*.ipynb 
+*.mov
+__pycache__
+notebooks
+README.md

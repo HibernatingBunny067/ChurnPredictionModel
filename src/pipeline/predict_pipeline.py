@@ -1,8 +1,5 @@
 import numpy as np
 import pandas as pd
-import os
-import json
-from fastapi import FastAPI
 from src.exception import CustomException
 from src.logger import logging
 from src.utils import load_object
@@ -23,18 +20,37 @@ class PredictPipeline:
     def predict(self,features):
         try:
             data_scaled = self.preprocessor.transform(features)
+
             model = self.model_bundle['model']
             thresh = self.model_bundle['threshold']
+            explainer = self.model_bundle['explainer']
+
             preds = model.predict_proba(data_scaled)[:,1]
             prediction = (preds > thresh)
+            shap_values = explainer.shap_values(data_scaled)
+
+            if isinstance(shap_values, list):
+                shap_list = shap_values[1].tolist()
+            else:
+                shap_list = shap_values.tolist()
+
 
             results = {
                 "prediction": float(prediction),
                 "probability": float(preds[0]),
-                "threshold_used": float(thresh)
+                "threshold_used": float(thresh),
+                "shap": shap_list,
+                "column_names":self._get_feature_names()
             }
-            
+            logging.info(f'Result generated {float(prediction)}')
             return results
+        except Exception as e:
+            raise CustomException(e)
+        
+    def _get_feature_names(self):
+        try:
+            columns = [cols.split('__')[-1] for cols in self.preprocessor.named_steps['preprocessor'].get_feature_names_out()]
+            return columns
         except Exception as e:
             raise CustomException(e)
 
@@ -59,7 +75,8 @@ class CustomData:
         PaymentMethod: str,
         MonthlyCharges: float,
         TotalCharges: str  # Note: Can be str if your pipeline handles conversion
-    ):
+    ):  
+        logging.info('Data Inputted...')
         self.gender = gender
         self.SeniorCitizen = SeniorCitizen
         self.Partner = Partner

@@ -51,7 +51,7 @@ def predict_datapoint(data:CustomerInput):
         raise HTTPException(status_code=500,detail=str(e))
 
 @app.post('/predictbatch')
-async def predict_batch(file:UploadFile = File(...)):
+async def predict_batch(file:UploadFile = File()):
     try:
         content = await file.read()
         df = pd.read_csv(io.BytesIO(content))
@@ -78,6 +78,8 @@ async def predict_batch(file:UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch Processing Failed: {str(e)}")
+
+
 
 if __name__ == '__main__':
     uvicorn.run(app, host="127.0.0.1", port=8000)

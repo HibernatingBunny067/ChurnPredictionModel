@@ -6,17 +6,19 @@ from sklearn.metrics import recall_score, roc_auc_score, precision_recall_curve
 import numpy as np
 from dataclasses import dataclass
 from src.utils import save_object
+import shap 
 
 @dataclass
 class ModelTrainerConfig:
     trained_model_path = os.path.join('artifacts','model.pkl')
-    best_params = {'solver': 'saga', 
-                    'penalty': 'l1', 
-                    'C': 0.09823172642497621, 
-                    'tol': 4.142905343830171e-06,
-                    'l1_ratio':None,
-                    'max_iter':2500,
-                    'class_weight':'balanced'}
+    best_params = best_params = {
+    'solver': 'saga',
+    'l1_ratio': 1.0,          # L1
+    'C': 0.09823172642497621,
+    'tol': 4.142905343830171e-06,
+    'max_iter': 2500,
+    'class_weight': 'balanced'
+}
 
 class ModelTrainer:
     def __init__(self):
@@ -64,14 +66,15 @@ class ModelTrainer:
 
             # print(f"Final Model AUC: {final_auc:.4f}")
             # print(f"Final Model Recall (at threshold {custom_threshold:.2f}): {final_recall:.4f}")
-
+            explainer = shap.LinearExplainer(model,X_train)
             logging.info(f"Saving model and threshold bundle to {self.model_trainer_config.trained_model_path}")
             
             save_object(
                 file_path=self.model_trainer_config.trained_model_path,
                 obj={
                     "model": model,
-                    "threshold": custom_threshold
+                    "threshold": custom_threshold,
+                    "explainer":explainer
                 }
             )
 
