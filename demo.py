@@ -1,24 +1,69 @@
-import gradio as gr
+import streamlit as st
 import requests
+import plotly.graph_objects as go
 
 # --- 1. CONFIGURATION ---
-# These options must match EXACTLY what your model was trained on.
+# Page Config (Browser Title and Icon)
+st.set_page_config(page_title="Churn Predictor", page_icon="📡", layout="wide")
+
+# Options (Must match your model training)
 GENDER_OPTS = ["Female", "Male"]
 YES_NO_OPTS = ["Yes", "No"]
 INTERNET_OPTS = ["DSL", "Fiber optic", "No"]
 CONTRACT_OPTS = ["Month-to-month", "One year", "Two year"]
 PAYMENT_OPTS = ["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"]
-SERVICE_OPTS = ["Yes", "No", "No internet service"] 
+SERVICE_OPTS = ["Yes", "No", "No internet service"]
 PHONE_OPTS = ["Yes", "No", "No phone service"]
 
-def predict_api(gender, senior, partner, dependents, tenure, phone, multiple_lines, internet, 
-                security, backup, device, tech, tv, movies, contract, paperless, 
-                payment, monthly, total):
-    
+# --- 2. HEADER ---
+st.title("📡 Telco Customer Churn System")
+st.markdown("""
+This dashboard connects to a **FastAPI Microservice** running a Logistic Regression model.
+Adjust customer details below to assess the probability of churn.
+""")
 
+# --- 3. INPUT FORM (Organized in Columns) ---
+with st.form("churn_form"):
+    
+    # Create 3 columns for better layout
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader("👤 Demographics")
+        gender = st.selectbox("Gender", GENDER_OPTS)
+        senior = st.radio("Senior Citizen", YES_NO_OPTS, horizontal=True)
+        partner = st.radio("Partner", YES_NO_OPTS, horizontal=True)
+        dependents = st.radio("Dependents", YES_NO_OPTS, horizontal=True)
+        tenure = st.slider("Tenure (Months)", 0, 72, 12)
+
+    with col2:
+        st.subheader("🛠️ Services")
+        phone = st.radio("Phone Service", YES_NO_OPTS, horizontal=True)
+        multiple_lines = st.selectbox("Multiple Lines", PHONE_OPTS)
+        internet = st.selectbox("Internet Service", INTERNET_OPTS)
+        security = st.selectbox("Online Security", SERVICE_OPTS)
+        backup = st.selectbox("Online Backup", SERVICE_OPTS)
+        device = st.selectbox("Device Protection", SERVICE_OPTS)
+        
+    with col3:
+        st.subheader("💳 Billing & Others")
+        tech = st.selectbox("Tech Support", SERVICE_OPTS)
+        tv = st.selectbox("Streaming TV", SERVICE_OPTS)
+        movies = st.selectbox("Streaming Movies", SERVICE_OPTS)
+        contract = st.selectbox("Contract", CONTRACT_OPTS)
+        paperless = st.radio("Paperless Billing", YES_NO_OPTS, horizontal=True)
+        payment = st.selectbox("Payment Method", PAYMENT_OPTS)
+        monthly = st.number_input("Monthly Charges ($)", value=29.85, step=0.05)
+        total = st.number_input("Total Charges ($)", value=29.85, step=1.0)
+
+    # Submit Button
+    submitted = st.form_submit_button("🚀 Predict Churn Risk", use_container_width=True)
+
+# --- 4. PREDICTION LOGIC ---
+if submitted:
     payload = {
         "gender": gender,
-        "SeniorCitizen": 1 if senior == "Yes" else 0, 
+        "SeniorCitizen": 1 if senior == "Yes" else 0,
         "Partner": partner,
         "Dependents": dependents,
         "tenure": int(tenure),
@@ -35,78 +80,64 @@ def predict_api(gender, senior, partner, dependents, tenure, phone, multiple_lin
         "PaperlessBilling": paperless,
         "PaymentMethod": payment,
         "MonthlyCharges": float(monthly),
-        "TotalCharges": str(total) # Pydantic expects String for TotalCharges
+        "TotalCharges": str(total)
     }
 
-    print("\n--- Sending Payload ---")
-    print(payload)
-
     try:
-        response = requests.post("http://127.0.0.1:8000/predictdata", json=payload)
+        with st.spinner("Connecting to AI Model..."):
+            response = requests.post("http://127.0.0.1:8000/predictdata", json=payload)
         
-        if response.status_code != 200:
-            return f"⚠️ API Error {response.status_code}: {response.text}"
-            
-        result = response.json()
+        if response.status_code == 200:
+            result = response.json()
+            pred = result['prediction']
+            prob = result['probability']
+            thresh = result['threshold_used']
 
-        risk = "🔴 HIGH CHURN RISK" if result['prediction'] == 1 else "🟢 CUSTOMER SAFE"
-        prob = f"Probability: {result['probability']:.1%}"
-        thresh = f"Threshold Used: {result['threshold_used']:.2f}"
-        
-        return f"{risk}\n{prob}\n({thresh})"
-        
+            # --- 5. VISUALIZATION ---
+            st.divider()
+            
+            # Create two columns: Metrics on Left, Chart on Right
+            vis_col1, vis_col2 = st.columns([2, 1])
+            
+            with vis_col1:
+                st.subheader("Prediction Details")
+                if pred == 1:
+                    st.error(f"🚨 **High Churn Risk Detected**\n\nThe model predicts this customer is likely to leave.")
+                else:
+                    st.success(f"✅ **Customer is Safe**\n\nThe model predicts this customer will stay.")
+                
+                # Metrics
+                m1, m2 = st.columns(2)
+                m1.metric("Risk Probability", f"{prob:.1%}", delta_color="inverse")
+                m2.metric("Decision Threshold", f"{thresh:.2f}")
+
+            with vis_col2:
+                # --- PIE CHART LOGIC ---
+                # We show "Risk" (prob) vs "Safe" (1 - prob)
+                labels = ['Churn Risk', 'Safe']
+                values = [prob, 1 - prob]
+                colors = ['#FF4B4B', '#2ECC71'] # Red for Risk, Green for Safe
+                
+                fig = go.Figure(data=[go.Pie(
+                    labels=labels, 
+                    values=values, 
+                    hole=.6, # Makes it a Donut Chart
+                    marker=dict(colors=colors),
+                    textinfo='percent', # Show % on the chart
+                    hoverinfo='label+percent'
+                )])
+                
+                # Clean up the layout (remove margins so it fits well)
+                fig.update_layout(
+                    showlegend=False,
+                    margin=dict(t=0, b=0, l=0, r=0),
+                    height=200,
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+
+        else:
+            st.error(f"API Error: {response.status_code} - {response.text}")
+
     except Exception as e:
-        return f"Connection Error: {str(e)}"
-
-
-with gr.Blocks(title="Telco Churn Prediction", theme=gr.themes.Soft()) as demo:
-    gr.Markdown("# 📡 Customer Churn Predictor")
-    gr.Markdown("Adjust the values below to see how the risk score changes.")
-    
-    with gr.Row():
-        with gr.Column(scale=1, min_width=300):
-            gr.Markdown("### 👤 Demographics")
-            # Defaults are important! We set value=... to avoid 'null' errors
-            gender = gr.Dropdown(GENDER_OPTS, label="Gender", value="Female")
-            senior = gr.Radio(YES_NO_OPTS, label="Senior Citizen", value="No")
-            partner = gr.Radio(YES_NO_OPTS, label="Partner", value="No")
-            dependents = gr.Radio(YES_NO_OPTS, label="Dependents", value="No")
-            tenure = gr.Slider(0, 72, label="Tenure (Months)", value=12)
-
-        with gr.Column(scale=1, min_width=300):
-            gr.Markdown("### 🛠️ Services")
-            phone = gr.Radio(YES_NO_OPTS, label="Phone Service", value="Yes")
-            multiple_lines = gr.Dropdown(PHONE_OPTS, label="Multiple Lines", value="No")
-            internet = gr.Dropdown(INTERNET_OPTS, label="Internet Service", value="DSL")
-            security = gr.Dropdown(SERVICE_OPTS, label="Online Security", value="No")
-            backup = gr.Dropdown(SERVICE_OPTS, label="Online Backup", value="No")
-            device = gr.Dropdown(SERVICE_OPTS, label="Device Protection", value="No")
-            tech = gr.Dropdown(SERVICE_OPTS, label="Tech Support", value="No")
-            tv = gr.Dropdown(SERVICE_OPTS, label="Streaming TV", value="No")
-            movies = gr.Dropdown(SERVICE_OPTS, label="Streaming Movies", value="No")
-
-        with gr.Column(scale=1, min_width=300):
-            gr.Markdown("### 💳 Billing Info")
-            contract = gr.Dropdown(CONTRACT_OPTS, label="Contract", value="Month-to-month")
-            paperless = gr.Radio(YES_NO_OPTS, label="Paperless Billing", value="Yes")
-            payment = gr.Dropdown(PAYMENT_OPTS, label="Payment Method", value="Electronic check")
-            monthly = gr.Number(label="Monthly Charges ($)", value=29.85)
-            total = gr.Number(label="Total Charges ($)", value=29.85)
-            
-            # Predict Button
-            btn = gr.Button("🚀 Predict Risk", variant="primary", size="lg")
-            output = gr.Textbox(label="Prediction Result", lines=4)
-
-    # Click Event - Pass ALL 19 inputs in correct order
-    btn.click(
-        fn=predict_api,
-        inputs=[
-            gender, senior, partner, dependents, tenure, phone, multiple_lines, internet, 
-            security, backup, device, tech, tv, movies, contract, paperless, 
-            payment, monthly, total
-        ],
-        outputs=output
-    )
-
-if __name__ == "__main__":
-    demo.launch(server_port=8080)
+        st.error(f"Connection Error. Is the backend running? \n\nDetails: {e}")

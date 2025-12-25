@@ -5,7 +5,8 @@ matplotlib
 scikit-learn
 fastapi 
 xgboost
-gradio
 pydantic
 requests
+streamlit
+plotly
 #-e .
