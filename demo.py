@@ -17,6 +17,7 @@ SERVICE_OPTS = ["Yes", "No", "No internet service"]
 PHONE_OPTS = ["Yes", "No", "No phone service"]
 
 # --- 2. HEADER ---
+st.logo(image='images/img.jpeg',size='large')
 st.title("📡 Telco Customer Churn System")
 st.markdown("""
 This dashboard connects to a **FastAPI Microservice** running a Logistic Regression model.
