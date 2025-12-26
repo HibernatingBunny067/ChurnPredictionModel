@@ -187,7 +187,13 @@ with tab1:
 
     with tab2:
         st.header("Batched Predictions")
-        uploaded_file = st.file_uploader('Upload CSV',type=['csv'])
+
+        use_sample_data = st.checkbox('Click here to use sample data',help='Synthetically generated data will be processed.')
+
+        if use_sample_data:
+            uploaded_file = 'sample/sample.csv'
+        else:
+            uploaded_file = st.file_uploader('Upload CSV',type=['csv'])
 
         if uploaded_file:
             df = pd.read_csv(uploaded_file)
@@ -197,18 +203,28 @@ with tab1:
             if st.button("Process Batch"):
                 try:
                     with st.spinner("Processing Batch..."):
-                        # RESET file pointer to beginning before sending
-                        uploaded_file.seek(0)
+                        #request library needs File Like object (byte stream not strings)
+                        if use_sample_data:
+                            try:
+                                file_to_send = open('sample/sample.csv', 'rb')
+                            except Exception as e:
+                                raise st.error(str(e))
+                        else:
+                            uploaded_file.seek(0)
+                            file_to_send = uploaded_file
                         
                         # Send file to FastAPI
-                        files = {"file": ("filename.csv", uploaded_file, "text/csv")}
+                        files = {"file": ("filename.csv", file_to_send, "text/csv")}
                         with st.spinner('Connecting to the inference API....',):
                             response = requests.post("http://127.0.0.1:8000/predictbatch", files=files)
-                    
+                            if use_sample_data:
+                                file_to_send.close()
                     if response.status_code == 200:
                         results = response.json()
-                        result_df = pd.DataFrame(results).drop(columns=['row_index'])
-                        
+                        print(results)
+                        preds = pd.DataFrame(results)
+                        print(preds)
+                        result_df = pd.concat([df,preds],axis=1)
                         # Display Results
                         st.success("Batch Processing Complete!")
                         st.dataframe(result_df)
@@ -224,6 +240,39 @@ with tab1:
                         )
                     else:
                         st.error(f"Error {response.status_code}: {response.text}")
-                    
+
+                    st.divider()
+                    st.subheader("📊 Batch Prediction Summary")
+                    if 'prediction' in result_df.columns:
+
+                        counts = result_df['prediction'].value_counts()
+                        labels = [ "Churn Risk" if idx == 1 else "Safe" for idx in counts.index]
+                        values = counts.values
+                        
+                        color_map = {1: '#FF4B4B', 0: '#2ECC71'}
+                        colors = [color_map.get(idx, '#888888') for idx in counts.index]
+
+                        # 2. Create Donut Chart
+                        fig_batch = go.Figure(data=[go.Pie(
+                            labels=labels,
+                            values=values,
+                            hole=.5, # Makes it a Donut
+                            marker=dict(colors=colors),
+                            textinfo='label+percent',
+                            hoverinfo='label+value'
+                        )])
+
+                        fig_batch.update_layout(
+                            title="Predicted Class Distribution",
+                            height=400,
+                            showlegend=True
+                        )
+
+                        st.plotly_chart(fig_batch, use_container_width=True)
+                        
+                        c1, c2 = st.columns(2)
+                        c1.metric("Total Customers Processed", len(result_df))
+                        churn_count = len(result_df[result_df['prediction'] == 1])
+                        c2.metric("Identified At-Risk", churn_count, delta=f"{churn_count/len(result_df):.1%} Rate", delta_color="inverse")
                 except Exception as e:
                     st.error(f"Connection Error: {e}")
