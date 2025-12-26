@@ -221,9 +221,7 @@ with tab1:
                                 file_to_send.close()
                     if response.status_code == 200:
                         results = response.json()
-                        print(results)
                         preds = pd.DataFrame(results)
-                        print(preds)
                         result_df = pd.concat([df,preds],axis=1)
                         # Display Results
                         st.success("Batch Processing Complete!")
@@ -268,7 +266,7 @@ with tab1:
                             showlegend=True
                         )
 
-                        st.plotly_chart(fig_batch, use_container_width=True)
+                        st.plotly_chart(fig_batch, width='stretch')
                         
                         c1, c2 = st.columns(2)
                         c1.metric("Total Customers Processed", len(result_df))
