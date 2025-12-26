@@ -10,10 +10,7 @@ An **end-to-end Machine Learning churn prediction system** designed for **real-w
 This project goes beyond model training by implementing the **entire ML lifecycle**—from feature engineering and explainability to **Dockerized cloud deployment on AWS**, with a **FastAPI inference backend** and an interactive **Streamlit frontend**.
 ---
 ## [🔗 Demo](http://3.236.89.31:8501/)
-<video src="images/demo.mp4.mp4" controls width="600" height="400">
-  Your browser does not support the video tag.
-</video>
-
+![video](images/demo1.png)
 *app hosted on AWS EC2 instance.*
 ---
 
