@@ -1,4 +1,4 @@
-# 🚀 Full Stack ML Churn Prediction Pipeline
+# 🚀 Full Stack ML Churn Prediction Microservice
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.95-green)
