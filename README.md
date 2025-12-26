@@ -119,6 +119,7 @@ The system follows a **microservices-style architecture** where the UI and infer
 │   └── exception.py    # Custom exception handling
 ├── Dockerfile          # Docker configuration
 ├── app.py              # FastAPI entry point
+├── demo.py             # Streamlit UI connected to FastAPI backend API
 ├── streamlit_app.py    # Streamlit frontend
 ├── requirements.txt    # Python dependencies
 └── README.md
