@@ -9,7 +9,7 @@
 An **end-to-end Machine Learning churn prediction system** designed for **real-world production deployment**.
 This project goes beyond model training by implementing the **entire ML lifecycle**—from feature engineering and explainability to **Dockerized cloud deployment on AWS**, with a **FastAPI inference backend** and an interactive **Streamlit frontend**.
 ---
-## [🔗 Demo](http://3.236.89.31:8501/)
+## [🔗 Demo](https://huggingface.co/spaces/harrykesh/ChurnPredictionDemo)
 ![video](images/demo1.png)
 *app hosted on AWS EC2 instance.*
 ---
@@ -37,7 +37,7 @@ The system follows a **microservices-style architecture** where the UI and infer
     participant S as Streamlit UI
     participant A as FastAPI Backend
     participant P as ML Pipeline
-    participant M as XGBoost Model
+    participant M as Logistic Regression Model
     participant X as SHAP Explainer
 
     U->>S: Upload CSV / Enter Form Data
