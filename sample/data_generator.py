@@ -2,10 +2,6 @@ import numpy as np
 import pandas as pd
 import random 
 
-import pandas as pd
-import numpy as np
-import random
-
 def generate_synthetic_data(num_samples=600):
     # 1. Defining options exactly as the model expects them
     genders = ["Female", "Male"]
@@ -61,7 +57,7 @@ def generate_synthetic_data(num_samples=600):
     df = pd.DataFrame(data)
     output_filename = "sample/sample.csv"
     df.to_csv(output_filename, index=False)
-    print(f"✅ Successfully created {output_filename} with {num_samples} rows!")
+    print(f"Successfully created {output_filename} with {num_samples} rows!")
     return df
 
 if __name__ == "__main__":
