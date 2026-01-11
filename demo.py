@@ -34,6 +34,7 @@ st.title("📡 Telco Customer Churn System with Explainable AI")
 st.markdown("""
 This dashboard connects to a **FastAPI Microservice** running a Logistic Regression model.
 Adjust customer details or upload csv below to assess the probability of churn.
+\n **NOTE: TotalCharges is calculated as monthly_charges*tenure**
 """)
 
 tab1,tab2 = st.tabs(['Single Prediction','Batched Prediction'])
@@ -49,7 +50,7 @@ with tab1:
             senior = st.radio("Senior Citizen", YES_NO_OPTS, horizontal=True)
             partner = st.radio("Partner", YES_NO_OPTS, horizontal=True)
             dependents = st.radio("Dependents", YES_NO_OPTS, horizontal=True)
-            tenure = st.slider("Tenure (Months)", 0, 72, 12)
+            tenure = st.slider("Tenure (Months)", 0, 120, 12)
 
         with col2:
             st.subheader("🛠️ Services")
@@ -69,7 +70,7 @@ with tab1:
             paperless = st.radio("Paperless Billing", YES_NO_OPTS, horizontal=True)
             payment = st.selectbox("Payment Method", PAYMENT_OPTS)
             monthly = st.number_input("Monthly Charges ($)", value=29.85, step=0.05)
-            total = st.number_input("Total Charges ($)", value=29.85, step=1.0)
+            total = monthly * tenure
 
         # Submit Button
         submitted = st.form_submit_button("🚀 Predict Churn Risk", width='stretch')

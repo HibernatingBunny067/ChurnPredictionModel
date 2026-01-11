@@ -28,7 +28,7 @@ class FeatureEngineer(BaseEstimator,TransformerMixin):
             X_copy = X.copy()
             X_copy['TotalCharges'] = pd.to_numeric(X_copy['TotalCharges'], errors='coerce')
             X_copy['TotalCharges'] = X_copy['TotalCharges'].fillna(self.fill_value)
-
+            X_copy['TotalCharges'] = np.log1p(X_copy['TotalCharges'])
             # --- Feature Engineering Logic from the Notebook ---
             
             # 1. Contract + Payment Interaction
